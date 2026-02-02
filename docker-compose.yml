@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # 1. 로그 생성기
+  generator:
+    build: .
+    container_name: log-generator
+    command: python log_generator.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'     # CPU 0.5개만 사용 가능
+          memory: 128M
+
+  # 2. 분석기 1호
+  analyzer-1:
+    build: .
+    container_name: analyzer-1
+    command: python analyzer.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'     # CPU 0.2개 (아주 느림)
+          memory: 128M
+    depends_on:
+      - generator
+
+  # 3. 분석기 2호
+  analyzer-2:
+    build: .
+    container_name: analyzer-2
+    command: python analyzer.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+    depends_on:
+      - generator
+
+  # 4. 분석기 3호
+  analyzer-3:
+    build: .
+    container_name: analyzer-3
+    command: python analyzer.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+    depends_on:
+      - generator
