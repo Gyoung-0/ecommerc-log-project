@@ -9,6 +9,7 @@ from faker import Faker
 fake = Faker()
 
 # 2. File path to save logs
+
 FILE_PATH = "data/user_log.csv"
 
 def generate_log():
@@ -55,10 +56,15 @@ def main():
             with open(FILE_PATH, 'a', newline='', encoding='utf-8') as f:
                 writer = csv.DictWriter(f, fieldnames=log_data.keys())
                 writer.writerow(log_data)
+
             # print(f"Log generated: {log_data['event_type']}")
             
             # Sleep for 0.1 seconds (Generates approx. 10 logs per second)
             # time.sleep(0.1)
+            print(f"Log generated: {log_data['event_type']}")
+            
+            # Sleep for 0.1 seconds (Generates approx. 10 logs per second)
+            time.sleep(0.1)
     except KeyboardInterrupt:
         print("\n Log generation stopped")
         
