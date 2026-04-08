@@ -2,65 +2,57 @@ import time
 import csv
 import random
 import os
+import shutil
 from datetime import datetime
 from faker import Faker
 
-# 1. initialize Faker generator
 fake = Faker()
-
-# 2. File path to save logs
 FILE_PATH = "data/user_log.csv"
+MAX_FILE_SIZE = 10 * 1024  # 💥 10KB (순식간에 쪼개짐)
+
+def rotate_log_file():
+    if os.path.exists(FILE_PATH) and os.path.getsize(FILE_PATH) > MAX_FILE_SIZE:
+        timestamp = datetime.now().strftime("%H%M%S")
+        rotated_name = f"data/user_log_{timestamp}.csv"
+        
+        # 1. 기존 파일 이름 변경 (Rotation)
+        shutil.move(FILE_PATH, rotated_name)
+        print(f"\n🔄 [System] 파일 교체됨! ({FILE_PATH} -> {rotated_name})\n")
+        
+        # 2. 새 파일 생성 (빈 파일)
+        with open(FILE_PATH, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['event_time', 'user_id', 'event_type', 'product_id', 'price'])
+            writer.writeheader()
 
 def generate_log():
-    """
-    Generates a single log enrty as a dictionary
-    """
     event_types = ['click', 'view', 'purchase']
     current_event = random.choice(event_types)
-    
-    # Generate price and product_id only for 'purchase' events.
-    # Otherwise, set them to None or -
-    if current_event == 'purchase':
-        product_id = fake.ean8() # 8-digit product code
-        price = round(random.uniform(10.0 , 500.0), 2) # Price between $10 and $500
-    else:
-        product_id = None
-        price = 0
-        
     return {
-        'event_time': datetime.now().isoformat(), # Current timestamp
-        'user_id': fake.uuid4(),                  # Random User ID
+        'event_time': datetime.now().isoformat(),
+        'user_id': fake.uuid4(),
         'event_type': current_event,
-        'product_id': product_id,
-        'price': price
+        'product_id': fake.ean8() if current_event == 'purchase' else None,
+        'price': round(random.uniform(10.0, 500.0), 2) if current_event == 'purchase' else 0
     }
-    
+
 def main():
-    print(f"Starting Log Generator... (Target File: {FILE_PATH})")
+    print(f"🚀 Generator 시작 (10KB마다 파일 교체)")
     
-    # If the file doesn`t exist, create it and write the CSV header first
+    # 초기 파일 생성
     if not os.path.exists(FILE_PATH):
         with open(FILE_PATH, 'w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=['event_time', 'user_id', 'event_type', 'product_id', 'price'])
             writer.writeheader()
-            
-    # 3. Infinite loop: Runs until the program is manually stopped
-    try:
-        while True:
-            log_data = generate_log()
-            
-            # Open file in 'a' (append) mode to add data
-            # NOTE: Opening and closing the file for evenry single line is inefficient
-            # We will experience the pain of tihs approach later
-            with open(FILE_PATH, 'a', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=log_data.keys())
-                writer.writerow(log_data)
-            # print(f"Log generated: {log_data['event_type']}")
-            
-            # Sleep for 0.1 seconds (Generates approx. 10 logs per second)
-            # time.sleep(0.1)
-    except KeyboardInterrupt:
-        print("\n Log generation stopped")
+
+    while True:
+        rotate_log_file() # 파일 크기 체크
+
+        log_data = generate_log()
+        with open(FILE_PATH, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=log_data.keys())
+            writer.writerow(log_data)
         
+        time.sleep(0.05) # 너무 빠르면 로그 못보니까 살짝 대기
+
 if __name__ == "__main__":
     main()
