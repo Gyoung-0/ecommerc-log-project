@@ -1,70 +1,56 @@
-version: '3.8'
-
 services:
-  # 1. 로그 생성기
-  generator:
-    build: .
-    container_name: log-generator
-    command: python log_generator.py
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
     environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./:/app
-      - ./data:/app/data
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'     # CPU 0.5개만 사용 가능
-          memory: 128M
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
 
-  # 2. 분석기 1호
-  analyzer-1:
-    build: .
-    container_name: analyzer-1
-    command: python analyzer.py
-    environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./:/app
-      - ./data:/app/data
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'     # CPU 0.2개 (아주 느림)
-          memory: 128M
+  kafka-1:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-1
     depends_on:
-      - generator
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 내부망(INTERNAL)과 외부망(EXTERNAL) 출입문 2개 분리
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
-  # 3. 분석기 2호
-  analyzer-2:
-    build: .
-    container_name: analyzer-2
-    command: python analyzer.py
-    environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./data:/app/data
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 128M
+  kafka-2:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-2
     depends_on:
-      - generator
+      - zookeeper
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29093,EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:29093,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
-  # 4. 분석기 3호
-  analyzer-3:
-    build: .
-    container_name: analyzer-3
-    command: python analyzer.py
-    environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./data:/app/data
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 128M
+  kafka-3:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-3
     depends_on:
-      - generator
+      - zookeeper
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29094,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-3:29094,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
