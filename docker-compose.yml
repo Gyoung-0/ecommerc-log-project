@@ -68,3 +68,12 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      # 그라파나 띄울 때 클릭하우스 연결 플러그인을 자동으로 설치
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource

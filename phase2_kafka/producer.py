@@ -3,29 +3,23 @@ import json
 import random
 from datetime import datetime
 from faker import Faker
-from confluent_kafka import Producer
+from confluent_kafka import Producer, KafkaError
 
 fake = Faker()
 
-# 1. 카프카 클러스터 연결 설정 (1, 2, 3호기 주소 모두 입력)
 conf = {
     'bootstrap.servers': 'localhost:9092,localhost:9093,localhost:9094',
     'client.id': 'cluster-producer',
-    'acks': 'all'
+    'acks': 'all',
+    'queue.buffering.max.messages': 1000000 # 👈 로컬 메모리 큐 한도 펌핑!
 }
-
 producer = Producer(conf)
 
-def delivery_report(err, msg):
-    if err is not None:
-        print(f"❌ 전송 실패: {err}")
-    else:
-        # 이번엔 파티션과 오프셋(번호표)까지 출력해 봅시다!
-        print(f"✅ [전송 완료] Topic: {msg.topic()} | Partition: {msg.partition()} | Offset: {msg.offset()}")
-
 def main():
-    print("🚀 카프카 클러스터(3-Broker)로 로그 전송 시작! (Ctrl+C로 종료)")
-    topic_name = "ecommerce-cluster-logs" # 우리가 방금 만든 3중 복제 창고 이름!
+    print("🚀 [폭주 모드 시작] 브레이크 박살! 초당 무제한 발사 시작!")
+    topic_name = "ecommerce-cluster-logs"
+    count = 0
+    start_time = time.time()
     
     try:
         while True:
@@ -36,15 +30,25 @@ def main():
                 'price': round(random.uniform(10.0, 500.0), 2)
             }
             
-            json_data = json.dumps(log_data)
-            
-            producer.produce(topic=topic_name, value=json_data.encode('utf-8'), callback=delivery_report)
-            producer.poll(0)
-            
-            time.sleep(0.1)
+            try:
+                # 콜백(callback)마저 빼버립니다. 극강의 속도를 위해!
+                producer.produce(topic=topic_name, value=json.dumps(log_data).encode('utf-8'))
+                producer.poll(0) 
+            except BufferError:
+                # 🚨 파이썬 메모리가 카프카 전송 속도를 못 따라갈 때 터지는 에러
+                print("💥 [BufferError] 앗! 프로듀서 큐가 꽉 찼습니다. 강제 1초 휴식!")
+                producer.poll(1)
+                continue
+
+            count += 1
+            if count % 10000 == 0:
+                elapsed = time.time() - start_time
+                tps = 10000 / elapsed
+                print(f"🔥 10,000건 발사 완료! (소요 시간: {elapsed:.2f}초, TPS: {tps:.0f}건/초)")
+                start_time = time.time()
 
     except KeyboardInterrupt:
-        print("\n🛑 시스템 종료 중... 남은 데이터 밀어내기...")
+        print("\n🛑 시스템 종료 중... 남은 데이터 털어내는 중 (오래 걸릴 수 있음)...")
         producer.flush()
 
 if __name__ == "__main__":
