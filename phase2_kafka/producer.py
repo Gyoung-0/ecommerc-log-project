@@ -41,7 +41,7 @@ def main():
             producer.produce(topic=topic_name, value=json_data.encode('utf-8'), callback=delivery_report)
             producer.poll(0)
             
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     except KeyboardInterrupt:
         print("\n🛑 시스템 종료 중... 남은 데이터 밀어내기...")
